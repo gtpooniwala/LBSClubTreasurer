@@ -18,6 +18,8 @@ function getAmount(request) {
         return request.request.total_claim_amount || 0;
     } else if (type === 'internal_transfer') {
         return request.request.transfer_amount || 0;
+    } else if (type === 'refund_request') {
+        return request.request.refund_amount || 0;
     }
     return request.request.amount || 0;
 }
@@ -40,6 +42,8 @@ function getVendor(request) {
         return request.request.merchant_name || 'N/A';
     } else if (type === 'internal_transfer') {
         return request.request.recipient_club_name || 'N/A';
+    } else if (type === 'refund_request') {
+        return request.request.member_name || 'N/A';
     }
     return request.request.vendor || 'N/A';
 }
@@ -55,6 +59,8 @@ function getDescription(request) {
         return request.request.expense_description || 'N/A';
     } else if (type === 'internal_transfer') {
         return request.request.purpose_of_transfer || 'N/A';
+    } else if (type === 'refund_request') {
+        return request.request.reason_for_refund || 'N/A';
     }
     return request.request.description || 'N/A';
 }
@@ -121,9 +127,22 @@ function updateStats() {
         return reqDate === today;
     }).length;
     
+    // Calculate time saved: 2 hours (120 minutes) per approved request
+    const approved = allRequests.filter(r => r.metadata.status === 'approved').length;
+    const timeSaved = approved * 120;
+    
     document.getElementById('pending-count').textContent = pending;
     document.getElementById('today-count').textContent = today;
     document.getElementById('total-count').textContent = allRequests.length;
+    
+    // Display time saved in appropriate format
+    if (timeSaved >= 60) {
+        const hours = Math.floor(timeSaved / 60);
+        const mins = timeSaved % 60;
+        document.getElementById('time-saved').textContent = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+    } else {
+        document.getElementById('time-saved').textContent = `${timeSaved} mins`;
+    }
 }
 
 /**
@@ -153,7 +172,6 @@ function populatePendingRequests() {
                     </h3>
                     <p>Member: <strong>${member}</strong></p>
                     <p>Type: <strong>${type}</strong></p>
-                    <p>Budget: <strong>${request.request.budget_line || 'N/A'}</strong></p>
                 </div>
                 <div class="request-card-amount">£${amount.toFixed(2)}</div>
             </div>
@@ -187,6 +205,26 @@ function showRequestDetail(requestId) {
         ? `<a href="/receipts/${receiptFile}" target="_blank">📎 ${receiptFile}</a>`
         : 'No receipt';
     
+    // Build all request data fields (excluding hardcoded/system fields)
+    const excludeFields = ['club_name', 'treasurer_email', 'club_treasurer_email', 
+                          'location', 'payment_type', 'charge_allocation_percentage', 
+                          'initiating_club_name', 'email', 'invoice_type', 'currency', 
+                          'invoice_currency', 'transfer_amount_currency', 'type'];
+    
+    let allFieldsHtml = '';
+    for (const [key, value] of Object.entries(request.request)) {
+        if (!excludeFields.includes(key) && value !== null && value !== undefined && value !== '') {
+            const fieldName = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            const fieldValue = typeof value === 'object' ? JSON.stringify(value) : value;
+            allFieldsHtml += `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>${fieldName}:</strong></td>
+                    <td style="padding: 8px; border-bottom: 1px solid #ddd;">${fieldValue}</td>
+                </tr>
+            `;
+        }
+    }
+    
     modalBody.innerHTML = `
         <h2>${requestId}</h2>
         
@@ -200,30 +238,7 @@ function showRequestDetail(requestId) {
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Type:</strong></td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${request.request.type}</td>
             </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Amount:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>£${getAmount(request).toFixed(2)}</strong></td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getDate(request)}</td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Vendor/Merchant:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getVendor(request)}</td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Description:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getDescription(request)}</td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Event Code:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getBudgetLine(request)}</td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Receipt/Invoice:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${receiptLink}</td>
-            </tr>
+            ${allFieldsHtml}
         </table>
         
         <h3 style="margin-top: 20px;">✅ Validation Results</h3>
@@ -254,7 +269,7 @@ function approveRequest() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            treasurer: 'Treasurer Name',
+            treasurer: 'Arijit',
             notes: 'Approved'
         })
     })
@@ -282,7 +297,7 @@ function holdRequest() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            treasurer: 'Treasurer Name',
+            treasurer: 'Arijit',
             notes: reason
         })
     })
@@ -310,7 +325,7 @@ function rejectRequest() {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-            treasurer: 'Treasurer Name',
+            treasurer: 'Arijit',
             notes: reason
         })
     })

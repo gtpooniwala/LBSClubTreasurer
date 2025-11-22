@@ -136,6 +136,28 @@ class ConversationManager:
             "content": user_message
         })
         
+        # Check if user says they don't have some information
+        lacks_info_response = self._check_lacks_information(user_message)
+        if lacks_info_response:
+            self.history.append({
+                "role": "assistant",
+                "content": lacks_info_response
+            })
+            return {
+                "response": lacks_info_response,
+                "extracted_data": self.extracted_data.copy(),
+                "complete": False,
+                "form_type": self.form_type,
+                "suggested_form_type": self.suggested_form_type,
+                "form_type_confirmed": self.form_type_confirmed,
+                "missing_fields": self.missing_fields,
+                "validation_status": self.validation_status,
+                "confidence": self._calculate_overall_confidence(),
+                "request_id": self.request_id,
+                "current_agent": self.current_agent,
+                "agent_status": self._get_agent_status_display()
+            }
+        
         # Check if user is confirming a suggested form type
         if self.suggested_form_type and not self.form_type_confirmed:
             confirmation = self._check_user_confirmation(user_message)
@@ -303,6 +325,36 @@ class ConversationManager:
             return "no"
         
         return "unclear"
+    
+    def _check_lacks_information(self, message: str) -> Optional[str]:
+        """
+        Check if user says they don't have some information
+        If so, provide treasurer email for them to contact
+        
+        Returns: Response string if user lacks info, None otherwise
+        """
+        message_lower = message.lower().strip()
+        
+        # Keywords indicating user doesn't have information
+        lacks_info_keywords = [
+            "don't have", "dont have", "do not have",
+            "don't know", "dont know", "do not know",
+            "not sure", "unsure", "no idea",
+            "missing", "don't remember", "can't find",
+            "cannot find", "not available", "unavailable",
+            "i dont", "i don't", "idk"
+        ]
+        
+        if any(keyword in message_lower for keyword in lacks_info_keywords):
+            treasurer_email = self.extracted_data.get("treasurer_email", "abc@123.com")
+            return (
+                f"No problem! If you don't have this information readily available, "
+                f"please reach out to the treasurer at **{treasurer_email}** for assistance.\n\n"
+                f"They can help you get the missing details you need to complete your request. "
+                f"Feel free to continue when you have the information! 📧"
+            )
+        
+        return None
     
     def _detect_form_type_from_correction(self, message: str) -> Optional[str]:
         """

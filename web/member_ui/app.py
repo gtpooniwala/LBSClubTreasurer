@@ -47,6 +47,30 @@ def get_form_display_name(form_type: str) -> str:
     return form_names.get(form_type, form_type)
 
 
+def format_extracted_data(data: dict) -> str:
+    """Format extracted data for better readability"""
+    if not data:
+        return "No data collected yet"
+    
+    # Skip hardcoded fields that are not user-provided
+    skip_fields = {
+        "club_name", "treasurer_email", "club_treasurer_email", 
+        "location", "payment_type", "charge_allocation_percentage",
+        "initiating_club_name", "email", "invoice_type", "currency",
+        "invoice_currency", "transfer_amount_currency"
+    }
+    
+    formatted_lines = []
+    for key, value in data.items():
+        if key in skip_fields:
+            continue
+        # Format field name nicely
+        field_name = key.replace('_', ' ').title()
+        formatted_lines.append(f"• {field_name}: {value}")
+    
+    return "\n".join(formatted_lines) if formatted_lines else "No user data collected yet"
+
+
 def chat_interface(user_message: str, history: list) -> tuple:
     """
     Process user message and return updated history
@@ -84,25 +108,25 @@ def chat_interface(user_message: str, history: list) -> tuple:
         history.append({"role": "user", "content": user_message})
         history.append({"role": "assistant", "content": response})
         
-        # Update UI displays
-        extracted_json = str(current_request_data)
+        # Update UI displays with formatted data
+        extracted_json = format_extracted_data(current_request_data)
         
         # Get agent status for display
         agent_status = result.get("agent_status", "💬 Processing...")
         
-        status_msg = f"**Current Stage:** {agent_status}\n\n"
-        status_msg += f"**Form Type:** {get_form_display_name(current_form_type)}\n"
+        status_msg = f"Current Stage: {agent_status}\n\n"
+        status_msg += f"Form Type: {get_form_display_name(current_form_type)}\n"
         
         if result.get("suggested_form_type") and not result.get("form_type_confirmed"):
-            status_msg += f"**Suggested Type:** {get_form_display_name(result['suggested_form_type'])} (awaiting confirmation)\n"
+            status_msg += f"Suggested Type: {get_form_display_name(result['suggested_form_type'])} (awaiting confirmation)\n"
         
         if result.get("form_type_confirmed"):
-            status_msg += "**Confirmed:** ✅\n"
-            status_msg += f"**Fields Collected:** {len(current_request_data)}/{len(result.get('missing_fields', [])) + len(current_request_data)}\n\n"
+            status_msg += "Confirmed: ✅\n"
+            status_msg += f"Fields Collected: {len(current_request_data)}/{len(result.get('missing_fields', [])) + len(current_request_data)}\n\n"
             
             # Show missing fields in readable format
             if result['missing_fields']:
-                status_msg += "**📋 Still Need:**\n"
+                status_msg += "Still Need:\n"
                 # Get field descriptions if available
                 if conversation_manager and conversation_manager.form_specific_fields:
                     for field in result['missing_fields']:
@@ -115,9 +139,9 @@ def chat_interface(user_message: str, history: list) -> tuple:
                     for field in result['missing_fields']:
                         status_msg += f"  • {field.replace('_', ' ').title()}\n"
             else:
-                status_msg += "**✅ All Information Collected**\n"
+                status_msg += "✅ All Information Collected\n"
         
-        status_msg += f"\n**Confidence:** {result['confidence']:.0%}"
+        status_msg += f"\nConfidence: {result['confidence']:.0%}"
         
         submit_status = "✅ Ready to Submit" if result["complete"] else agent_status
         
@@ -131,9 +155,48 @@ def chat_interface(user_message: str, history: list) -> tuple:
         return history, "{}", "ERROR", "Error occurred"
 
 
+def _get_amount_from_data(data: dict, form_type: str) -> float:
+    """Get amount based on form type"""
+    if form_type == "supplier_payment":
+        return data.get("invoice_amount", 0)
+    elif form_type == "expense_reimbursement":
+        return data.get("total_claim_amount", 0)
+    elif form_type == "internal_transfer":
+        return data.get("transfer_amount", 0)
+    elif form_type == "refund_request":
+        return data.get("refund_amount", 0)
+    return data.get("amount", 0)
+
+
+def _get_vendor_from_data(data: dict, form_type: str) -> str:
+    """Get vendor/payee based on form type"""
+    if form_type == "supplier_payment":
+        return data.get("vendor_name", "N/A")
+    elif form_type == "expense_reimbursement":
+        return data.get("merchant_name", "N/A")
+    elif form_type == "internal_transfer":
+        return data.get("recipient_club_name", "N/A")
+    elif form_type == "refund_request":
+        return data.get("member_name", "N/A")
+    return "N/A"
+
+
+def _get_description_from_data(data: dict, form_type: str) -> str:
+    """Get description based on form type"""
+    if form_type == "supplier_payment":
+        return data.get("purpose_of_payment", "N/A")
+    elif form_type == "expense_reimbursement":
+        return data.get("expense_description", "N/A")
+    elif form_type == "internal_transfer":
+        return data.get("purpose_of_transfer", "N/A")
+    elif form_type == "refund_request":
+        return data.get("reason_for_refund", "N/A")
+    return data.get("description", "N/A")
+
+
 def submit_request(history: list, extracted_json: str) -> str:
     """Submit request for treasurer review"""
-    global uploaded_documents
+    global uploaded_documents, current_form_type, current_request_data, current_validation
     
     if not current_form_type or not current_request_data:
         return "❌ Cannot submit: No valid request data"
@@ -151,7 +214,7 @@ def submit_request(history: list, extracted_json: str) -> str:
     try:
         # Create request in transaction logger
         request_id = transaction_logger.create_request(
-            member_name="Demo User",  # In production: from authentication
+            member_name="Gaurav",
             form_type=current_form_type,
             data=current_request_data
         )
@@ -164,25 +227,44 @@ def submit_request(history: list, extracted_json: str) -> str:
             current_request_data["uploaded_documents"] = [doc["name"] for doc in uploaded_documents]
             # In production: actually save/move files to request folder
         
-        # Reset for next request
-        conversation_manager.reset_conversation()
-        uploaded_documents = []
+        # Get form-specific fields for display
+        amount = _get_amount_from_data(current_request_data, current_form_type)
+        vendor = _get_vendor_from_data(current_request_data, current_form_type)
+        description = _get_description_from_data(current_request_data, current_form_type)
+        event_code = current_request_data.get('event_code', 'N/A')
+        
+        # Build detailed summary
+        form_names = {
+            "supplier_payment": "Vendor Payment",
+            "internal_transfer": "Internal Transfer",
+            "expense_reimbursement": "Expense Reimbursement",
+            "refund_request": "Member Refund"
+        }
+        form_display_name = form_names.get(current_form_type, current_form_type)
         
         success_msg = (
-            f"✅ **Request {request_id} submitted successfully!**\n\n"
-            f"**Summary:**\n"
-            f"- Type: {current_form_type}\n"
-            f"- Amount: {format_currency(current_request_data.get('amount', 0))}\n"
-            f"- Budget: {current_request_data.get('budget_line', 'N/A')}\n"
+            f"✅ **Request {request_id} Submitted Successfully!**\n\n"
+            f"**Request Type:** {form_display_name}\n\n"
+            f"**Key Details:**\n"
+            f"- Amount: {format_currency(amount)}\n"
+            f"- Vendor/Payee: {vendor}\n"
+            f"- Description: {description}\n"
+            f"- Event Code: {event_code}\n"
         )
         
         if current_request_data.get("uploaded_documents"):
             success_msg += f"- Documents: {len(current_request_data['uploaded_documents'])} file(s) attached\n"
         
         success_msg += (
-            f"\nYour request has been sent to the treasurer for review. "
-            f"You'll be notified when they take action."
+            "\n---\n\n"
+            "📧 Your request has been sent to **Arijit** (Treasurer) for review.\n"
+            "You'll be notified when action is taken.\n\n"
+            "✨ You can now start a new request or close this window."
         )
+        
+        # Reset for next request
+        conversation_manager.reset_conversation()
+        uploaded_documents = []
         
         return success_msg
     
@@ -330,51 +412,55 @@ def create_interface():
                         file_types=[".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xlsx", ".csv"],
                         scale=1
                     )
-            
-            with gr.Column(scale=1):
-                gr.Markdown("### 📋 Request Details")
                 
-                extracted_display = gr.Textbox(
-                    label="Extracted Data",
-                    value="{}",
-                    interactive=False,
-                    lines=10
-                )
+                gr.Markdown("---")
                 
-                status_display = gr.Textbox(
-                    label="Status",
-                    value="Ready to start",
-                    interactive=False,
-                    lines=5
-                )
-                
-                file_status = gr.Textbox(
-                    label="Uploaded Documents",
-                    value="No documents uploaded",
-                    interactive=False,
-                    lines=3
-                )
-                
-                submit_status = gr.Textbox(
-                    label="Submission Status",
-                    value="⏳ Waiting",
-                    interactive=False
-                )
-                
-                gr.Markdown("### ✅ Submit for Approval")
+                gr.Markdown("### 📤 Submit Your Request")
                 
                 submit_btn = gr.Button(
-                    "Submit for Treasurer Review",
+                    "✅ Submit for Treasurer Review",
                     scale=1,
                     variant="primary",
                     size="lg"
                 )
                 
                 submit_result = gr.Textbox(
-                    label="Result",
+                    label="Submission Status",
                     value="",
                     interactive=False,
-                    lines=4
+                    lines=12,
+                    show_label=True,
+                    visible=True
+                )
+            
+            with gr.Column(scale=1):
+                gr.Markdown("### 📋 Request Summary")
+                
+                extracted_display = gr.Textbox(
+                    label="Collected Information",
+                    value="No data collected yet",
+                    interactive=False,
+                    lines=12
+                )
+                
+                status_display = gr.Textbox(
+                    label="Progress",
+                    value="Ready to start",
+                    interactive=False,
+                    lines=8
+                )
+                
+                file_status = gr.Textbox(
+                    label="Documents",
+                    value="No documents uploaded",
+                    interactive=False,
+                    lines=3
+                )
+                
+                submit_status = gr.Textbox(
+                    label="Ready to Submit?",
+                    value="⏳ Waiting",
+                    interactive=False
                 )
         
         # Event handlers
