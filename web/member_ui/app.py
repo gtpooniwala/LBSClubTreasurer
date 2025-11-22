@@ -31,6 +31,7 @@ transaction_logger = TransactionLogger()
 current_request_data = {}
 current_form_type = None
 current_validation = None
+uploaded_documents = []
 
 
 def get_form_display_name(form_type: str) -> str:
@@ -50,7 +51,7 @@ def chat_interface(user_message: str, history: list) -> tuple:
     """
     Process user message and return updated history
     """
-    global current_request_data, current_form_type, current_validation
+    global current_request_data, current_form_type, current_validation, uploaded_documents
     
     if not conversation_manager:
         error_msg = "❌ System Error: API client not initialized. Check your Azure OpenAI credentials."
@@ -132,6 +133,7 @@ def chat_interface(user_message: str, history: list) -> tuple:
 
 def submit_request(history: list, extracted_json: str) -> str:
     """Submit request for treasurer review"""
+    global uploaded_documents
     
     if not current_form_type or not current_request_data:
         return "❌ Cannot submit: No valid request data"
@@ -157,16 +159,28 @@ def submit_request(history: list, extracted_json: str) -> str:
         # Add validation results
         transaction_logger.add_validation_results(request_id, validation_result)
         
+        # Store uploaded documents if any
+        if uploaded_documents:
+            current_request_data["uploaded_documents"] = [doc["name"] for doc in uploaded_documents]
+            # In production: actually save/move files to request folder
+        
         # Reset for next request
         conversation_manager.reset_conversation()
+        uploaded_documents = []
         
         success_msg = (
             f"✅ **Request {request_id} submitted successfully!**\n\n"
             f"**Summary:**\n"
             f"- Type: {current_form_type}\n"
             f"- Amount: {format_currency(current_request_data.get('amount', 0))}\n"
-            f"- Budget: {current_request_data.get('budget_line', 'N/A')}\n\n"
-            f"Your request has been sent to the treasurer for review. "
+            f"- Budget: {current_request_data.get('budget_line', 'N/A')}\n"
+        )
+        
+        if current_request_data.get("uploaded_documents"):
+            success_msg += f"- Documents: {len(current_request_data['uploaded_documents'])} file(s) attached\n"
+        
+        success_msg += (
+            f"\nYour request has been sent to the treasurer for review. "
             f"You'll be notified when they take action."
         )
         
@@ -179,11 +193,12 @@ def submit_request(history: list, extracted_json: str) -> str:
 
 def reset_form() -> tuple:
     """Reset the form"""
-    global current_request_data, current_form_type, current_validation
+    global current_request_data, current_form_type, current_validation, uploaded_documents
     
     current_request_data = {}
     current_form_type = None
     current_validation = None
+    uploaded_documents = []
     
     conversation_manager.reset_conversation() if conversation_manager else None
     
@@ -191,13 +206,95 @@ def reset_form() -> tuple:
         [],  # Empty history
         "{}",  # Empty JSON
         "Form reset. Ready to start a new request.",
-        "⏳ Ready"
+        "⏳ Ready",
+        "No documents uploaded"  # Clear file status
     )
+
+
+def handle_file_upload(files) -> str:
+    """Handle uploaded documents"""
+    global uploaded_documents, current_request_data, current_form_type
+    
+    if not files:
+        return "No files uploaded"
+    
+    uploaded_documents = []
+    file_info = []
+    
+    for file in files:
+        # Extract file info
+        file_data = {
+            "name": os.path.basename(file.name) if hasattr(file, 'name') else "unknown",
+            "path": file.name if hasattr(file, 'name') else file,
+            "size": os.path.getsize(file.name) if hasattr(file, 'name') and os.path.exists(file.name) else 0
+        }
+        uploaded_documents.append(file_data)
+        file_info.append(f"📎 {file_data['name']} ({file_data['size']} bytes)")
+    
+    # Automatically populate file fields based on form type
+    if uploaded_documents and conversation_manager:
+        file_field_mapping = {
+            "supplier_payment": "invoice_upload",
+            "expense_reimbursement": "receipt_upload",
+            "internal_transfer": "file_upload"
+        }
+        
+        # Update the conversation manager's extracted_data directly
+        if current_form_type and current_form_type in file_field_mapping:
+            field_name = file_field_mapping[current_form_type]
+            conversation_manager.extracted_data[field_name] = f"✓ {uploaded_documents[0]['name']}"
+            current_request_data[field_name] = f"✓ {uploaded_documents[0]['name']}"
+        # If form type not yet determined, try all possible file fields
+        else:
+            # Mark all possible file upload fields in conversation manager
+            conversation_manager.extracted_data["invoice_upload"] = f"✓ {uploaded_documents[0]['name']}"
+            conversation_manager.extracted_data["receipt_upload"] = f"✓ {uploaded_documents[0]['name']}"
+            conversation_manager.extracted_data["file_upload"] = f"✓ {uploaded_documents[0]['name']}"
+            # Also update local state
+            current_request_data["invoice_upload"] = f"✓ {uploaded_documents[0]['name']}"
+            current_request_data["receipt_upload"] = f"✓ {uploaded_documents[0]['name']}"
+            current_request_data["file_upload"] = f"✓ {uploaded_documents[0]['name']}"
+    
+    return "**Uploaded Documents:**\n" + "\n".join(file_info)
+
+
+def handle_file_upload_with_data(files) -> tuple:
+    """Handle file upload and return both status and updated data"""
+    global current_request_data, current_form_type
+    
+    file_status = handle_file_upload(files)
+    extracted_json = str(current_request_data)
+    
+    # Create a message about the uploaded files to inform the chatbot
+    if uploaded_documents:
+        file_names = [doc["name"] for doc in uploaded_documents]
+        # Make the message explicit about what field is being filled
+        if current_form_type == "supplier_payment":
+            upload_message = f"Here is the invoice PDF: {', '.join(file_names)}"
+        elif current_form_type == "expense_reimbursement":
+            upload_message = f"Here is the receipt: {', '.join(file_names)}"
+        elif current_form_type == "internal_transfer":
+            upload_message = f"Here is the supporting document: {', '.join(file_names)}"
+        else:
+            upload_message = f"I've uploaded the required document(s): {', '.join(file_names)}"
+    else:
+        upload_message = ""
+    
+    return file_status, extracted_json, upload_message
 
 
 # Build Gradio interface
 def create_interface():
     """Create the Gradio interface"""
+    
+    # Reset conversation state on interface load
+    global current_request_data, current_form_type, current_validation, uploaded_documents
+    current_request_data = {}
+    current_form_type = None
+    current_validation = None
+    uploaded_documents = []
+    if conversation_manager:
+        conversation_manager.reset_conversation()
     
     with gr.Blocks(title="LBS Finance Assistant") as app:
         gr.Markdown("# 💰 LBS Club Finance Assistant")
@@ -220,12 +317,19 @@ def create_interface():
                     label="Your message",
                     placeholder="e.g., 'I need £180 reimbursed for speaker dinner on Nov 20'",
                     lines=2,
-                    interactive=True
+                    interactive=True,
+                    autofocus=True,
+                    elem_classes="message-input"
                 )
                 
                 with gr.Row():
                     submit_chat = gr.Button("Send", scale=1, variant="primary")
-                    reset_btn = gr.Button("New Request", scale=1)
+                    file_upload = gr.UploadButton(
+                        "📎 Upload Documents",
+                        file_count="multiple",
+                        file_types=[".pdf", ".png", ".jpg", ".jpeg", ".doc", ".docx", ".xlsx", ".csv"],
+                        scale=1
+                    )
             
             with gr.Column(scale=1):
                 gr.Markdown("### 📋 Request Details")
@@ -242,6 +346,13 @@ def create_interface():
                     value="Ready to start",
                     interactive=False,
                     lines=5
+                )
+                
+                file_status = gr.Textbox(
+                    label="Uploaded Documents",
+                    value="No documents uploaded",
+                    interactive=False,
+                    lines=3
                 )
                 
                 submit_status = gr.Textbox(
@@ -270,12 +381,17 @@ def create_interface():
         def on_send(message, history):
             return chat_interface(message, history)
         
+        # Helper to clear and refocus input
+        def clear_input():
+            return gr.Textbox(value="", interactive=True)
+        
+        # Enter key or click Send button
         msg_input.submit(
             on_send,
             [msg_input, chatbot],
             [chatbot, extracted_display, status_display, submit_status]
         ).then(
-            lambda: gr.Textbox(value=""),
+            clear_input,
             [],
             msg_input
         )
@@ -285,15 +401,27 @@ def create_interface():
             [msg_input, chatbot],
             [chatbot, extracted_display, status_display, submit_status]
         ).then(
-            lambda: gr.Textbox(value=""),
+            clear_input,
             [],
             msg_input
         )
         
-        reset_btn.click(
-            reset_form,
-            [],
-            [chatbot, extracted_display, status_display, submit_status]
+        # File upload handler - processes upload and triggers chatbot
+        def handle_upload_and_chat(files, history):
+            # First handle the file upload
+            file_status, extracted_json, upload_message = handle_file_upload_with_data(files)
+            
+            # If files were uploaded, process through chatbot
+            if upload_message:
+                updated_history, updated_json, updated_status, updated_submit = chat_interface(upload_message, history)
+                return updated_history, updated_json, updated_status, updated_submit, file_status
+            else:
+                return history, extracted_json, "Ready to start", "⏳ Waiting", file_status
+        
+        file_upload.upload(
+            handle_upload_and_chat,
+            [file_upload, chatbot],
+            [chatbot, extracted_display, status_display, submit_status, file_status]
         )
         
         submit_btn.click(

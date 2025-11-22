@@ -8,6 +8,80 @@ let allRequests = [];
 let currentRequestId = null;
 
 /**
+ * Get amount from request based on form type
+ */
+function getAmount(request) {
+    const type = request.request.type;
+    if (type === 'supplier_payment') {
+        return request.request.invoice_amount || 0;
+    } else if (type === 'expense_reimbursement') {
+        return request.request.total_claim_amount || 0;
+    } else if (type === 'internal_transfer') {
+        return request.request.transfer_amount || 0;
+    }
+    return request.request.amount || 0;
+}
+
+/**
+ * Get date from request based on form type
+ */
+function getDate(request) {
+    return request.request.expense_date || request.request.date || 'N/A';
+}
+
+/**
+ * Get vendor/merchant name from request based on form type
+ */
+function getVendor(request) {
+    const type = request.request.type;
+    if (type === 'supplier_payment') {
+        return request.request.vendor_name || 'N/A';
+    } else if (type === 'expense_reimbursement') {
+        return request.request.merchant_name || 'N/A';
+    } else if (type === 'internal_transfer') {
+        return request.request.recipient_club_name || 'N/A';
+    }
+    return request.request.vendor || 'N/A';
+}
+
+/**
+ * Get description from request based on form type
+ */
+function getDescription(request) {
+    const type = request.request.type;
+    if (type === 'supplier_payment') {
+        return request.request.purpose_of_payment || 'N/A';
+    } else if (type === 'expense_reimbursement') {
+        return request.request.expense_description || 'N/A';
+    } else if (type === 'internal_transfer') {
+        return request.request.purpose_of_transfer || 'N/A';
+    }
+    return request.request.description || 'N/A';
+}
+
+/**
+ * Get budget/event code from request
+ */
+function getBudgetLine(request) {
+    return request.request.event_code || request.request.budget_line || 'N/A';
+}
+
+/**
+ * Get receipt/invoice upload from request
+ */
+function getReceipt(request) {
+    const type = request.request.type;
+    if (type === 'supplier_payment') {
+        return request.request.invoice_upload || null;
+    } else if (type === 'expense_reimbursement') {
+        return request.request.receipt_upload || null;
+    } else if (type === 'internal_transfer') {
+        return request.request.file_upload || null;
+    }
+    return request.request.receipt || null;
+}
+
+/**
  * Load all data and populate dashboard
  */
 async function loadDashboard() {
@@ -40,10 +114,10 @@ async function loadDashboard() {
  * Update dashboard statistics
  */
 function updateStats() {
-    const pending = allRequests.filter(r => r.status === 'pending_review').length;
+    const pending = allRequests.filter(r => r.metadata.status === 'pending_review').length;
     const today = allRequests.filter(r => {
         const today = new Date().toDateString();
-        const reqDate = new Date(r.created_at).toDateString();
+        const reqDate = new Date(r.metadata.created_at).toDateString();
         return reqDate === today;
     }).length;
     
@@ -57,7 +131,7 @@ function updateStats() {
  */
 function populatePendingRequests() {
     const pendingList = document.getElementById('pending-list');
-    const pending = allRequests.filter(r => r.status === 'pending_review');
+    const pending = allRequests.filter(r => r.metadata.status === 'pending_review');
     
     if (pending.length === 0) {
         pendingList.innerHTML = '<p class="loading">No pending requests</p>';
@@ -65,7 +139,7 @@ function populatePendingRequests() {
     }
     
     pendingList.innerHTML = pending.map(request => {
-        const amount = request.request.amount || 0;
+        const amount = getAmount(request);
         const member = request.member.name || 'Unknown';
         const type = request.request.type || 'Unknown';
         const id = request.metadata.request_id;
@@ -108,8 +182,9 @@ function showRequestDetail(requestId) {
         ? `<strong>Issues:</strong><ul>${violations.map(v => `<li>${v.message}</li>`).join('')}</ul>`
         : '';
     
-    const receiptLink = request.request.receipt 
-        ? `<a href="/receipts/${request.request.receipt}" target="_blank">View Receipt</a>`
+    const receiptFile = getReceipt(request);
+    const receiptLink = receiptFile
+        ? `<a href="/receipts/${receiptFile}" target="_blank">📎 ${receiptFile}</a>`
         : 'No receipt';
     
     modalBody.innerHTML = `
@@ -127,26 +202,26 @@ function showRequestDetail(requestId) {
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Amount:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>£${(request.request.amount || 0).toFixed(2)}</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>£${getAmount(request).toFixed(2)}</strong></td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Date:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${request.request.date || 'N/A'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getDate(request)}</td>
             </tr>
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Vendor:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${request.request.vendor || 'N/A'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Vendor/Merchant:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getVendor(request)}</td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Description:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${request.request.description || 'N/A'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getDescription(request)}</td>
             </tr>
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Budget Line:</strong></td>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${request.request.budget_line || 'N/A'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Event Code:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">${getBudgetLine(request)}</td>
             </tr>
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Receipt:</strong></td>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Receipt/Invoice:</strong></td>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">${receiptLink}</td>
             </tr>
         </table>
@@ -278,7 +353,7 @@ function updateActivityTable() {
                 <td>${request.request.date || 'N/A'}</td>
                 <td>${request.member.name}</td>
                 <td>${request.request.type}</td>
-                <td>£${(request.request.amount || 0).toFixed(2)}</td>
+                <td>£${getAmount(request).toFixed(2)}</td>
                 <td><span class="status-badge ${statusClass}">${status}</span></td>
             </tr>
         `;

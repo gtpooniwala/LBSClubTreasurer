@@ -31,7 +31,13 @@ class ConversationManager:
             "club_treasurer_email": "abc@123.com",  # For expense reimbursement
             "location": "London",  # Hard-coded for Infor XM
             "payment_type": "Cash",  # Hard-coded for Infor XM
-            "charge_allocation_percentage": 100  # Hard-coded for Infor XM
+            "charge_allocation_percentage": 100,  # Hard-coded for Infor XM
+            "initiating_club_name": "Data and AI Club",  # Hard-coded for internal transfer
+            "email": "abc@123.com",  # Hard-coded for refund request
+            "invoice_type": "Final Invoice",  # Hard-coded for vendor payment
+            "currency": "GBP",  # Hard-coded for all forms (pounds)
+            "invoice_currency": "GBP",  # Hard-coded for vendor payment
+            "transfer_amount_currency": "GBP"  # Hard-coded for internal transfer (if needed)
         }
         self.form_type = None
         self.form_type_confirmed = False  # New: Track if user confirmed form type
@@ -155,14 +161,35 @@ class ConversationManager:
                 agent_response = self._generate_contextual_response()
                 
             elif confirmation == "no":
-                # User rejected suggestion, ask them to clarify
-                self.suggested_form_type = None
-                self.current_agent = "initial_gathering"
-                agent_response = "I understand. Can you describe your request in more detail? For example:\n" \
-                               "- Are you paying a vendor invoice?\n" \
-                               "- Transferring funds between clubs?\n" \
-                               "- Getting reimbursed for expenses you already paid?\n" \
-                               "- Processing a member refund?"
+                # User rejected suggestion - try to detect what they actually want
+                corrected_type = self._detect_form_type_from_correction(user_message)
+                
+                if corrected_type:
+                    # User explicitly stated the form type (e.g., "it's vendor payment")
+                    self.form_type = corrected_type
+                    self.form_type_confirmed = True
+                    self.suggested_form_type = None
+                    self.load_form_specific_rules(self.form_type)
+                    self.current_agent = f"form_collection_{self.form_type}"
+                    
+                    # Update missing fields list
+                    self.missing_fields = [
+                        field for field in self.required_fields
+                        if field not in self.extracted_data or not self.extracted_data[field]
+                    ]
+                    
+                    logger.info(f"✅ User corrected to form type: {self.form_type}")
+                    agent_response = self._generate_contextual_response()
+                else:
+                    # User rejected but didn't specify - ask for clarification
+                    self.suggested_form_type = None
+                    self.current_agent = "initial_gathering"
+                    agent_response = "I understand. Which type of request is this?\n\n" \
+                                   "1. **Vendor Payment** - Paying an external company/vendor for an invoice\n" \
+                                   "2. **Internal Transfer** - Moving funds between LBS clubs\n" \
+                                   "3. **Expense Reimbursement** - Getting reimbursed for money you already spent\n" \
+                                   "4. **Member Refund** - Refunding a member for tickets/fees\n\n" \
+                                   "You can reply with the number or name."
             else:
                 # Unclear response, ask again
                 agent_response = f"Just to confirm - is this a **{self._get_form_display_name(self.suggested_form_type)}** request? Please answer 'yes' or 'no'."
@@ -276,6 +303,37 @@ class ConversationManager:
             return "no"
         
         return "unclear"
+    
+    def _detect_form_type_from_correction(self, message: str) -> Optional[str]:
+        """
+        Detect form type when user corrects our suggestion
+        e.g., "No, it's vendor payment" or "It's expense reimbursement"
+        
+        Returns: form_type string or None
+        """
+        message_lower = message.lower().strip()
+        
+        # Check for explicit form type mentions
+        if any(keyword in message_lower for keyword in ["vendor", "supplier", "invoice", "payment to vendor", "paying vendor", "paying supplier"]):
+            return "supplier_payment"
+        elif any(keyword in message_lower for keyword in ["transfer", "internal", "between clubs", "club to club"]):
+            return "internal_transfer"
+        elif any(keyword in message_lower for keyword in ["reimbursement", "reimburse", "expense", "spent", "paid out of pocket", "already paid"]):
+            return "expense_reimbursement"
+        elif any(keyword in message_lower for keyword in ["refund", "member refund", "ticket refund"]):
+            return "refund_request"
+        
+        # Check for numbered responses (1-4)
+        if message_lower in ["1", "one", "first"]:
+            return "supplier_payment"
+        elif message_lower in ["2", "two", "second"]:
+            return "internal_transfer"
+        elif message_lower in ["3", "three", "third"]:
+            return "expense_reimbursement"
+        elif message_lower in ["4", "four", "fourth"]:
+            return "refund_request"
+        
+        return None
     
     def _get_form_display_name(self, form_type: str) -> str:
         """Get human-readable form name"""

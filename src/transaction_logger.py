@@ -40,6 +40,10 @@ class TransactionLogger:
             from src.utils import generate_request_id
             request_id = generate_request_id()
         
+        # Add current date if not present
+        if "date" not in data and "expense_date" not in data:
+            data["date"] = datetime.now().strftime("%d %B %Y")
+        
         # Build full request object
         request_obj = {
             "metadata": {
