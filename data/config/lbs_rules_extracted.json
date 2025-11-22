@@ -1,0 +1,182 @@
+{
+  "club_treasurer_responsibilities": {
+    "establish_budget": "Establish Club budget for the year to ensure that the Club functions within its means",
+    "maintain_accounts": "Maintain an accurate set of Club accounts and reconcile with monthly balances issued by the SA",
+    "secure_event_planning": "Be involved in Club event planning to ensure that event budget and related payments are secured in advance",
+    "ensure_governance": "Ensure Clubs are fiscally responsible – Club funds are for all members, not just the ExCo",
+    "manage_transactions": "Submit, track and manage Club transactions, including vendor payments, expense reimbursements & refunds",
+    "stakeholder_management": "Manage relationships with all external and internal stakeholders"
+  },
+  
+  "core_rules": {
+    "balance_requirements": {
+      "minimum_balance": 0,
+      "minimum_balance_note": "Must maintain positive balance to be allowed to transact",
+      "maximum_balance": 20000,
+      "maximum_balance_note": "Must stay at or below £20,000 for Coin Vote eligibility",
+      "currency": "GBP"
+    },
+    
+    "spending_limits": {
+      "exco_social_limit_percent": 10,
+      "exco_social_limit_note": "ExCo-only spend may not exceed 10% of overall spend per quarter",
+      "social_per_head_limit": 45,
+      "social_per_head_limit_note": "Social spending per event cannot exceed £45 per head (exceptions for all-member events if pre-agreed)",
+      "supplier_invoice_pre_approval_threshold": 8000,
+      "expense_reimbursement_pre_approval_threshold": 1000
+    },
+    
+    "communication_rules": {
+      "only_treasurer_transacts": true,
+      "use_teams_not_whatsapp": true,
+      "no_direct_lbs_contact": true,
+      "contact_sa_treasury_only": true
+    },
+    
+    "processing_times": {
+      "sa_treasury_approval_days": 5,
+      "lbs_processing_days": 10,
+      "supplier_payment_minimum_days": 14
+    }
+  },
+  
+  "transaction_types": {
+    "supplier_payment": {
+      "form_name": "Supplier Payment Form",
+      "description": "For payments made to vendors based on formal invoices with wire instructions",
+      "required_documents": ["invoice", "contract_if_applicable"],
+      "invoice_requirements": {
+        "address_to": "London Business School Students Association, Sussex Place, Regent's Park, London, NW1 4SA",
+        "must_have_wire_instructions": true,
+        "final_not_proforma": true
+      },
+      "pre_approval_threshold": 8000,
+      "notes": [
+        "Supplier invoices exceeding £8,000 must be pre-approved by SA Senior Treasurer",
+        "All new suppliers with invoices exceeding £5,000 must go through bank account verification",
+        "LBS Finance needs at least two weeks to process invoice payments"
+      ]
+    },
+    
+    "internal_transfer": {
+      "form_name": "Internal Transfer Form",
+      "description": "Transfers of funds between Clubs or between Clubs and the SA",
+      "requires_finance_code": true,
+      "initiating_club_raises_code": true,
+      "notes": [
+        "The Club initiating the transfer must raise the finance code",
+        "For multiple recipients, attach an Excel with recipient names and amounts"
+      ]
+    },
+    
+    "expense_reimbursement": {
+      "form_name": "Expense Claim Reimbursement Form",
+      "description": "Reimburse Club leaders or members for spending out of pocket on behalf of the Club",
+      "requires_infor_xm_submission": true,
+      "infor_xm_title_format": "<Finance Code>_<Club>_<Event>",
+      "required_documents": ["itemized_receipt"],
+      "receipt_requirements": {
+        "must_be_itemized": true,
+        "no_credit_card_stubs": true
+      },
+      "pre_approval_threshold": 1000,
+      "social_per_head_limit": 45,
+      "notes": [
+        "Reimbursements exceeding £1,000 must be pre-approved by SA Senior Treasurer",
+        "Social event amount cannot exceed £45 per head",
+        "All submissions without itemized receipts will be rejected",
+        "Avoid out-of-pocket spending wherever possible"
+      ]
+    },
+    
+    "refund_request": {
+      "form_name": "Refund Request Form",
+      "description": "For tickets purchased or fees paid in error or which the purchaser wants to cancel",
+      "club_discretion": true,
+      "notes": [
+        "Clubs have discretion to decide when to allow refunds",
+        "Club Treasurer should complete this form, not Club members"
+      ]
+    }
+  },
+  
+  "finance_code_rules": {
+    "purpose": "Finance codes track revenues and expenses to/from your Club",
+    "timing": "Request at least two weeks before event/spending occurs",
+    "reuse_criteria": "May reuse codes from last year if exact same event",
+    "new_code_required_for": "Any net new events not run last year",
+    "usage_examples": [
+      "On all transaction request forms",
+      "When booking LBS Catering orders",
+      "On CampusGroups event pages (Section 8 - Cost Center Code)"
+    ]
+  },
+  
+  "prohibited_activities": {
+    "direct_cash_prizes": {
+      "allowed": false,
+      "alternatives": ["gift_cards", "vouchers", "sponsor_pays_directly"]
+    },
+    "using_non_approved_ticketing": {
+      "allowed": false,
+      "approved_platforms": ["CampusGroups", "Eventscase"],
+      "note": "May not use any other ticketing platform"
+    }
+  },
+  
+  "validation_requirements": {
+    "all_transactions": {
+      "must_have_finance_code": true,
+      "must_have_positive_balance": true,
+      "must_have_active_treasurer": true
+    },
+    "supplier_invoices": {
+      "must_be_properly_addressed": true,
+      "must_have_wire_instructions": true,
+      "over_8000_needs_preapproval": true,
+      "over_5000_needs_bank_verification": true
+    },
+    "expense_reimbursements": {
+      "must_have_itemized_receipt": true,
+      "no_credit_card_stubs": true,
+      "over_1000_needs_preapproval": true,
+      "socials_limited_to_45_per_head": true
+    }
+  },
+  
+  "form_type_classification_criteria": {
+    "supplier_payment": {
+      "keywords": ["invoice", "supplier", "vendor", "payment", "bill", "contractor"],
+      "indicators": [
+        "Has vendor/supplier name",
+        "Has invoice number",
+        "Payment to external party",
+        "Not already paid"
+      ]
+    },
+    "internal_transfer": {
+      "keywords": ["transfer", "send to club", "joint event", "share funds"],
+      "indicators": [
+        "Mentions another club name",
+        "Collaboration or partnership",
+        "Split costs"
+      ]
+    },
+    "expense_reimbursement": {
+      "keywords": ["reimburse", "paid out of pocket", "personal card", "already paid", "receipt"],
+      "indicators": [
+        "Member or treasurer already paid",
+        "Has receipt",
+        "Seeking refund of personal funds"
+      ]
+    },
+    "refund_request": {
+      "keywords": ["refund", "cancel", "ticket refund", "membership refund", "paid in error"],
+      "indicators": [
+        "Member wants money back",
+        "Cancellation request",
+        "Error in payment"
+      ]
+    }
+  }
+}

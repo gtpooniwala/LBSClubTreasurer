@@ -1,0 +1,66 @@
+{
+  "reimbursement": {
+    "form_name": "Expense Reimbursement Form",
+    "required_fields": ["amount", "date", "vendor", "description", "budget_line"],
+    "optional_fields": ["receipt", "notes", "member_id"],
+    "field_types": {
+      "amount": "float",
+      "date": "date",
+      "vendor": "string",
+      "description": "string",
+      "budget_line": "select",
+      "receipt": "file",
+      "notes": "text"
+    },
+    "validation": {
+      "amount": {
+        "min": 0.01,
+        "max": 500.0,
+        "required": true
+      },
+      "date": {
+        "format": "YYYY-MM-DD",
+        "max_days_old": 30,
+        "required": true
+      },
+      "vendor": {
+        "min_length": 2,
+        "required": true
+      }
+    }
+  },
+  "budget_approval": {
+    "form_name": "Budget Adjustment Form",
+    "required_fields": ["amount", "budget_line", "justification"],
+    "optional_fields": ["notes"],
+    "field_types": {
+      "amount": "float",
+      "budget_line": "select",
+      "justification": "text",
+      "notes": "text"
+    }
+  },
+  "transfer": {
+    "form_name": "Inter-club Transfer Form",
+    "required_fields": ["amount", "from_account", "to_account", "reason"],
+    "optional_fields": ["authorization", "notes"],
+    "field_types": {
+      "amount": "float",
+      "from_account": "select",
+      "to_account": "select",
+      "reason": "text"
+    }
+  },
+  "event": {
+    "form_name": "Event Approval Form",
+    "required_fields": ["event_name", "date", "amount", "attendees"],
+    "optional_fields": ["budget_line", "description", "notes"],
+    "field_types": {
+      "event_name": "string",
+      "date": "date",
+      "amount": "float",
+      "attendees": "integer",
+      "budget_line": "select"
+    }
+  }
+}

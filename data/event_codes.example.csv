@@ -1,0 +1,5 @@
+event_code,club_name,event_name,event_type,vat_status,description,year_created
+E001,Finance Club,Annual Conference,Conference,VAT_EXEMPT,Annual finance conference with speakers and networking,2024
+E002,Finance Club,Speaker Dinner,General Event,VAT_EXEMPT,Monthly speaker dinner events,2024
+E003,Finance Club,Operating Costs,Operating Costs,VAT_EXEMPT,General operating expenses for the club,2024
+E031,Data and AI Club,AI Agent Cup,Competition,VAT_EXEMPT,AI Agent Cup competition event,2025

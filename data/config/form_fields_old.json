@@ -1,0 +1,321 @@
+{
+  "supplier_payment_form": {
+    "form_name": "Supplier Payment Form",
+    "description": "For payments made to vendors based on formal invoices with wire instructions",
+    "fields": {
+      "finance_code": {
+        "required": true,
+        "type": "string",
+        "description": "Approved finance/event code from Finance Code Directory",
+        "validation": "Must exist in approved codes list"
+      },
+      "club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the club"
+      },
+      "vendor_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of supplier/vendor"
+      },
+      "invoice_number": {
+        "required": true,
+        "type": "string",
+        "description": "Invoice number from vendor"
+      },
+      "invoice_date": {
+        "required": true,
+        "type": "date",
+        "description": "Date on the invoice"
+      },
+      "amount": {
+        "required": true,
+        "type": "number",
+        "description": "Total invoice amount in GBP",
+        "validation": "Over £8,000 requires SA Senior Treasurer pre-approval"
+      },
+      "currency": {
+        "required": true,
+        "type": "string",
+        "default": "GBP",
+        "description": "Currency of invoice"
+      },
+      "event_description": {
+        "required": true,
+        "type": "string",
+        "description": "Detailed description of what the payment is for"
+      },
+      "invoice_attachment": {
+        "required": true,
+        "type": "file",
+        "description": "PDF/image of invoice properly addressed to London Business School Students Association"
+      },
+      "contract_attachment": {
+        "required": false,
+        "type": "file",
+        "description": "Contract if applicable"
+      },
+      "payment_terms": {
+        "required": false,
+        "type": "string",
+        "description": "Payment terms from invoice"
+      },
+      "urgency": {
+        "required": false,
+        "type": "boolean",
+        "description": "Is this urgent? (will be communicated to LBS Finance)"
+      }
+    },
+    "pre_approval_required_if": {
+      "amount_over": 8000
+    },
+    "processing_notes": [
+      "LBS needs 2 weeks minimum to process",
+      "New suppliers over £5,000 require bank verification",
+      "Invoice must be addressed to: London Business School Students Association, Sussex Place, Regent's Park, London, NW1 4SA"
+    ]
+  },
+  
+  "internal_transfer_form": {
+    "form_name": "Internal Transfer Form",
+    "description": "Transfers of funds between Clubs or between Clubs and the SA",
+    "fields": {
+      "finance_code": {
+        "required": true,
+        "type": "string",
+        "description": "Finance code raised by the initiating club",
+        "validation": "Must exist in approved codes list"
+      },
+      "initiating_club": {
+        "required": true,
+        "type": "string",
+        "description": "Club sending the funds"
+      },
+      "receiving_club": {
+        "required": true,
+        "type": "string",
+        "description": "Club or SA pillar receiving the funds"
+      },
+      "amount": {
+        "required": true,
+        "type": "number",
+        "description": "Amount to transfer in GBP"
+      },
+      "purpose": {
+        "required": true,
+        "type": "string",
+        "description": "Reason for transfer (e.g., joint event, shared costs)"
+      },
+      "event_name": {
+        "required": false,
+        "type": "string",
+        "description": "Name of joint event if applicable"
+      },
+      "multiple_recipients": {
+        "required": false,
+        "type": "boolean",
+        "description": "Is this being split among multiple recipients?"
+      },
+      "recipients_breakdown": {
+        "required": false,
+        "type": "file",
+        "description": "Excel file with recipient names and amounts (if multiple recipients)"
+      }
+    },
+    "processing_notes": [
+      "Initiating club must raise the finance code",
+      "For multiple recipients, attach Excel with breakdown"
+    ]
+  },
+  
+  "expense_reimbursement_form": {
+    "form_name": "Expense Claim Reimbursement Form",
+    "description": "Reimburse for out-of-pocket spending on behalf of the Club",
+    "requires_infor_xm": true,
+    "infor_xm_title_format": "<Finance Code>_<Club>_<Event>",
+    "fields": {
+      "finance_code": {
+        "required": true,
+        "type": "string",
+        "description": "Approved finance/event code",
+        "validation": "Must exist in approved codes list"
+      },
+      "ec_reference": {
+        "required": true,
+        "type": "string",
+        "description": "EC reference number from Infor XM submission",
+        "note": "Must submit Infor XM BEFORE this form"
+      },
+      "club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the club"
+      },
+      "claimant_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of person claiming reimbursement"
+      },
+      "event_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of event or activity"
+      },
+      "expense_date": {
+        "required": true,
+        "type": "date",
+        "description": "Date expense was incurred"
+      },
+      "amount": {
+        "required": true,
+        "type": "number",
+        "description": "Total amount to reimburse in GBP",
+        "validation": "Over £1,000 requires SA Senior Treasurer pre-approval"
+      },
+      "merchant_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of merchant/vendor"
+      },
+      "expense_type": {
+        "required": true,
+        "type": "enum",
+        "options": ["social", "trek", "conference", "supplies", "catering", "other"],
+        "description": "Type of expense"
+      },
+      "is_social_event": {
+        "required": true,
+        "type": "boolean",
+        "description": "Is this a social event?"
+      },
+      "number_of_attendees": {
+        "required": true,
+        "type": "number",
+        "description": "Number of people who attended",
+        "validation": "Required for validation of social spending limits"
+      },
+      "attendee_names": {
+        "required": false,
+        "type": "string",
+        "description": "Names of attendees (required for groups up to 20)",
+        "note": "Include if 20 or fewer attendees"
+      },
+      "per_head_cost": {
+        "required": false,
+        "type": "number",
+        "description": "Cost per person (auto-calculated from amount/attendees)",
+        "validation": "Cannot exceed £45 per head for social events"
+      },
+      "receipt_attachment": {
+        "required": true,
+        "type": "file",
+        "description": "Itemized receipt (NOT credit card stub)",
+        "validation": "Must be itemized receipt showing breakdown"
+      },
+      "receipt_has_vat": {
+        "required": true,
+        "type": "boolean",
+        "description": "Does receipt include VAT?"
+      },
+      "expense_description": {
+        "required": true,
+        "type": "string",
+        "description": "Detailed description including breakdown if multiple receipts"
+      }
+    },
+    "pre_approval_required_if": {
+      "amount_over": 1000,
+      "social_per_head_over": 45
+    },
+    "processing_notes": [
+      "MUST submit Infor XM first, then this form",
+      "Social events limited to £45 per head",
+      "Itemized receipts required (no credit card stubs)",
+      "Avoid out-of-pocket spending when possible"
+    ]
+  },
+  
+  "refund_request_form": {
+    "form_name": "Refund Request Form",
+    "description": "For tickets/fees paid in error or cancelled by purchaser",
+    "fields": {
+      "finance_code": {
+        "required": true,
+        "type": "string",
+        "description": "Finance code associated with original payment"
+      },
+      "club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the club"
+      },
+      "member_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of member requesting refund"
+      },
+      "member_email": {
+        "required": true,
+        "type": "email",
+        "description": "Email of member requesting refund"
+      },
+      "original_payment_date": {
+        "required": true,
+        "type": "date",
+        "description": "Date of original payment"
+      },
+      "amount": {
+        "required": true,
+        "type": "number",
+        "description": "Amount to refund in GBP"
+      },
+      "payment_type": {
+        "required": true,
+        "type": "enum",
+        "options": ["ticket", "membership_fee", "trek_deposit", "event_fee", "other"],
+        "description": "Type of original payment"
+      },
+      "event_name": {
+        "required": false,
+        "type": "string",
+        "description": "Name of event if applicable"
+      },
+      "refund_reason": {
+        "required": true,
+        "type": "string",
+        "description": "Reason for refund request"
+      },
+      "refund_approved_by_club": {
+        "required": true,
+        "type": "boolean",
+        "description": "Has the club approved this refund?",
+        "note": "Clubs have discretion to approve/deny refunds"
+      },
+      "payment_proof": {
+        "required": false,
+        "type": "file",
+        "description": "Proof of original payment if available"
+      }
+    },
+    "processing_notes": [
+      "Clubs have discretion to decide when to allow refunds",
+      "Club Treasurer must submit, not the member directly"
+    ]
+  },
+  
+  "form_selection_guide": {
+    "decision_tree": {
+      "is_external_vendor_invoice": "supplier_payment_form",
+      "is_transfer_between_clubs": "internal_transfer_form",
+      "is_already_paid_out_of_pocket": "expense_reimbursement_form",
+      "is_refund_to_member": "refund_request_form"
+    },
+    "keywords_mapping": {
+      "supplier_payment_form": ["invoice", "supplier", "vendor", "payment", "bill", "contractor", "service provider"],
+      "internal_transfer_form": ["transfer", "send to club", "joint event", "collaboration", "share funds", "split costs"],
+      "expense_reimbursement_form": ["reimburse", "paid out of pocket", "personal card", "already paid", "receipt", "spent"],
+      "refund_request_form": ["refund", "cancel", "cancellation", "paid in error", "want money back", "ticket refund"]
+    }
+  }
+}

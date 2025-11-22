@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LBS Treasurer Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>💼 LBS Treasurer Dashboard</h1>
+                <p>Finance Request Management System</p>
+            </div>
+            <div class="header-stats">
+                <div class="stat-box">
+                    <span class="stat-label">⏳ Pending</span>
+                    <span class="stat-value" id="pending-count">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">✅ Today</span>
+                    <span class="stat-value" id="today-count">0</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">📊 Total</span>
+                    <span class="stat-value" id="total-count">0</span>
+                </div>
+                <button class="btn-refresh" onclick="loadDashboard()">🔄 Refresh</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- Pending Requests Section -->
+            <section class="section">
+                <h2>📋 Pending Approvals</h2>
+                <div id="pending-list" class="pending-list">
+                    <p class="loading">Loading requests...</p>
+                </div>
+            </section>
+
+            <!-- Recent Activity Section -->
+            <section class="section">
+                <h2>📜 Recent Activity</h2>
+                <table class="activity-table">
+                    <thead>
+                        <tr>
+                            <th>Request ID</th>
+                            <th>Date</th>
+                            <th>Member</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="activity-tbody">
+                        <tr>
+                            <td colspan="6" class="loading">Loading activity...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal for Request Details -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div id="modal-body"></div>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="approveRequest()">✅ Approve</button>
+                <button class="btn-warning" onclick="holdRequest()">⏸️ Hold</button>
+                <button class="btn-danger" onclick="rejectRequest()">❌ Reject</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

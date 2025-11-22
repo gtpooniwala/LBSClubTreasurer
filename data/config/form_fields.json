@@ -1,0 +1,339 @@
+{
+  "supplier_payment": {
+    "form_name": "Vendor Payment Request Form",
+    "description": "For payments made to vendors based on formal invoices",
+    "fields": {
+      "club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the club",
+        "ai_extractable": true
+      },
+      "treasurer_email": {
+        "required": true,
+        "type": "email",
+        "description": "Treasurer's email address",
+        "ai_extractable": false,
+        "auto_fill": true
+      },
+      "event_code": {
+        "required": true,
+        "type": "string",
+        "description": "Event Code from Directory (determines VAT status)",
+        "ai_extractable": true,
+        "can_auto_assign": true,
+        "manual_override": true
+      },
+      "vendor_name": {
+        "required": true,
+        "type": "string",
+        "description": "Vendor name as mentioned on the invoice",
+        "ai_extractable": true
+      },
+      "purpose_of_payment": {
+        "required": true,
+        "type": "string",
+        "description": "Services provided, purpose of payment",
+        "ai_extractable": true
+      },
+      "invoice_type": {
+        "required": true,
+        "type": "enum",
+        "options": ["Final Invoice"],
+        "description": "Invoice type (only Final Invoice accepted, no proforma)",
+        "ai_extractable": false,
+        "default": "Final Invoice"
+      },
+      "invoice_number": {
+        "required": true,
+        "type": "string",
+        "description": "Invoice number from the vendor",
+        "ai_extractable": true
+      },
+      "invoice_currency": {
+        "required": true,
+        "type": "string",
+        "description": "Currency of invoice (GBP, USD, EUR, etc.)",
+        "ai_extractable": true,
+        "default": "GBP"
+      },
+      "invoice_amount": {
+        "required": true,
+        "type": "number",
+        "description": "Invoice amount as listed in the invoice",
+        "ai_extractable": true
+      },
+      "vendor_contact_name": {
+        "required": true,
+        "type": "string",
+        "description": "Vendor contact person name",
+        "ai_extractable": true
+      },
+      "vendor_email": {
+        "required": true,
+        "type": "email",
+        "description": "Vendor company email (not personal email)",
+        "ai_extractable": true
+      },
+      "vendor_address": {
+        "required": false,
+        "type": "string",
+        "description": "Vendor address (not required if on invoice)",
+        "ai_extractable": true
+      },
+      "bank_account_name": {
+        "required": false,
+        "type": "string",
+        "description": "Vendor bank name (not required if on invoice)",
+        "ai_extractable": true
+      },
+      "bank_account_number": {
+        "required": false,
+        "type": "string",
+        "description": "Bank account number (not required if on invoice)",
+        "ai_extractable": true
+      },
+      "bank_sort_code": {
+        "required": false,
+        "type": "string",
+        "description": "Bank sort code (not required if on invoice)",
+        "ai_extractable": true
+      },
+      "special_instructions": {
+        "required": false,
+        "type": "string",
+        "description": "Special payment instructions (SWIFT, IBAN for foreign currency)",
+        "ai_extractable": true
+      },
+      "invoice_upload": {
+        "required": true,
+        "type": "file",
+        "description": "Invoice PDF/image (must be addressed to London Business School Student Association)",
+        "ai_extractable": false
+      }
+    },
+    "validation_notes": [
+      "Invoices must be addressed to 'London Business School Student Association'",
+      "Only Final Invoices accepted, no proforma invoices",
+      "Vendor email must be company email, not personal",
+      "Over £8,000 requires SA Senior Treasurer pre-approval"
+    ]
+  },
+
+  "internal_transfer": {
+    "form_name": "Internal Transfer Request Form",
+    "description": "Transfer funds from one club to another",
+    "fields": {
+      "treasurer_email": {
+        "required": true,
+        "type": "email",
+        "description": "Email of the Treasurer of the initiating club",
+        "ai_extractable": false,
+        "auto_fill": true
+      },
+      "initiating_club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Club sending the funds",
+        "ai_extractable": true
+      },
+      "initiating_club_event_code": {
+        "required": true,
+        "type": "string",
+        "description": "Event code of initiating club",
+        "ai_extractable": true,
+        "can_auto_assign": true,
+        "manual_override": true
+      },
+      "recipient_club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Club receiving the funds",
+        "ai_extractable": true
+      },
+      "recipient_event_code": {
+        "required": true,
+        "type": "string",
+        "description": "Event code of recipient club",
+        "ai_extractable": true,
+        "can_auto_assign": true,
+        "manual_override": true
+      },
+      "currency": {
+        "required": true,
+        "type": "string",
+        "description": "Currency (GBP only)",
+        "ai_extractable": false,
+        "default": "GBP"
+      },
+      "transfer_amount": {
+        "required": true,
+        "type": "number",
+        "description": "Transfer amount in GBP",
+        "ai_extractable": true
+      },
+      "purpose_of_transfer": {
+        "required": true,
+        "type": "string",
+        "description": "Purpose of transfer (if multiple parties, explain and attach Excel)",
+        "ai_extractable": true
+      },
+      "file_upload": {
+        "required": false,
+        "type": "file",
+        "description": "Excel file if transfers to multiple parties",
+        "ai_extractable": false
+      }
+    },
+    "validation_notes": [
+      "Currency must be GBP only",
+      "Initiating club must raise the event code",
+      "For multiple recipients, attach Excel with breakdown"
+    ]
+  },
+
+  "expense_reimbursement": {
+    "form_name": "Expense Reimbursement Form",
+    "description": "Reimburse treasurer for out-of-pocket expenses. Collects data for both Infor XM submission and LBS reimbursement form.",
+    "requires_infor_xm": true,
+    "infor_xm_note": "This form will collect all information needed for the Infor XM submission",
+    "fields": {
+      "event_code": {
+        "required": true,
+        "type": "string",
+        "description": "Event Code from the Directory",
+        "ai_extractable": true,
+        "can_auto_assign": true,
+        "manual_override": true
+      },
+      "expense_date": {
+        "required": true,
+        "type": "date",
+        "description": "Date of the expense (when you made the purchase)",
+        "ai_extractable": true,
+        "format": "YYYY-MM-DD"
+      },
+      "total_claim_amount": {
+        "required": true,
+        "type": "number",
+        "description": "Total claim amount in GBP",
+        "ai_extractable": true
+      },
+      "currency": {
+        "required": true,
+        "type": "string",
+        "description": "Currency of the expense (e.g., GBP, USD, EUR)",
+        "ai_extractable": true,
+        "default": "GBP"
+      },
+      "merchant_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the merchant/vendor where purchase was made",
+        "ai_extractable": true
+      },
+      "location": {
+        "required": true,
+        "type": "string",
+        "description": "Location of purchase",
+        "ai_extractable": false,
+        "default": "London",
+        "auto_fill": true
+      },
+      "payment_type": {
+        "required": true,
+        "type": "string",
+        "description": "Payment method used",
+        "ai_extractable": false,
+        "default": "Cash",
+        "auto_fill": true
+      },
+      "expense_description": {
+        "required": true,
+        "type": "string",
+        "description": "Description of what this expense was for",
+        "ai_extractable": true
+      },
+      "charge_allocation_percentage": {
+        "required": true,
+        "type": "number",
+        "description": "Percentage allocated to your club (vs other clubs)",
+        "ai_extractable": false,
+        "default": 100,
+        "auto_fill": true,
+        "note": "Currently always 100% for single club expenses"
+      },
+      "receipt_upload": {
+        "required": true,
+        "type": "file",
+        "description": "Receipt or invoice for this expense",
+        "ai_extractable": false,
+        "note": "Required for all reimbursements"
+      }
+    },
+    "validation_notes": [
+      "All fields will be used to fill both Infor XM and LBS reimbursement forms",
+      "Over £1,000 requires SA Senior Treasurer pre-approval",
+      "Social events limited to £45 per head",
+      "Location is always London for LBS expenses",
+      "Payment type is typically Cash for personal reimbursements",
+      "Charge allocation is 100% when expense is only for your club"
+    ]
+  },
+
+  "refund_request": {
+    "form_name": "Refund Request Form",
+    "description": "Process refunds for members (tickets, fees)",
+    "fields": {
+      "club_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the club",
+        "ai_extractable": true
+      },
+      "email": {
+        "required": true,
+        "type": "email",
+        "description": "Email of club treasurer",
+        "ai_extractable": false,
+        "auto_fill": true
+      },
+      "event_name": {
+        "required": true,
+        "type": "string",
+        "description": "Name of the event for which refunds are requested",
+        "ai_extractable": true
+      },
+      "event_finance_code": {
+        "required": true,
+        "type": "string",
+        "description": "Finance code for the event",
+        "ai_extractable": true,
+        "can_auto_assign": true,
+        "manual_override": true
+      },
+      "refund_type": {
+        "required": true,
+        "type": "enum",
+        "options": ["Single", "Multiple"],
+        "description": "Number of refund claims in this submission",
+        "ai_extractable": true
+      }
+    },
+    "validation_notes": [
+      "Club treasurer must submit, not members",
+      "Clubs have discretion to approve/deny refunds"
+    ]
+  },
+
+  "event_code_assignment": {
+    "description": "Event code assignment logic for AI agent",
+    "auto_assignment_rules": {
+      "match_by_club_and_event": "First try to match both club name and event name/type",
+      "match_by_club_only": "If no exact match, find operating costs code for the club",
+      "prompt_if_ambiguous": "If multiple possible codes, ask user to clarify",
+      "allow_manual_entry": "Always allow treasurer to manually specify event code"
+    },
+    "csv_location": "data/event_codes.csv"
+  }
+}
